@@ -1,4 +1,8 @@
-import collections
+try:  # Python 3.10
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
+
 
 from django.core.paginator import InvalidPage, EmptyPage, PageNotAnInteger
 from django.conf import settings
@@ -12,11 +16,20 @@ PAGINATION_SETTINGS = getattr(settings, "PAGINATION_SETTINGS", {})
 
 PAGE_RANGE_DISPLAYED = PAGINATION_SETTINGS.get("PAGE_RANGE_DISPLAYED", 10)
 MARGIN_PAGES_DISPLAYED = PAGINATION_SETTINGS.get("MARGIN_PAGES_DISPLAYED", 2)
-SHOW_FIRST_PAGE_WHEN_INVALID = PAGINATION_SETTINGS.get("SHOW_FIRST_PAGE_WHEN_INVALID", False)
+SHOW_FIRST_PAGE_WHEN_INVALID = PAGINATION_SETTINGS.get(
+    "SHOW_FIRST_PAGE_WHEN_INVALID", False
+)
 
 
 class Paginator(object):
-    def __init__(self, object_list, per_page, orphans=0, allow_empty_first_page=True, request=None):
+    def __init__(
+        self,
+        object_list,
+        per_page,
+        orphans=0,
+        allow_empty_first_page=True,
+        request=None,
+    ):
         self.object_list = object_list
         self.per_page = per_page
         self.orphans = orphans
@@ -29,19 +42,19 @@ class Paginator(object):
         try:
             number = int(number)
         except ValueError:
-            raise PageNotAnInteger('That page number is not an integer')
+            raise PageNotAnInteger("That page number is not an integer")
         if number < 1:
             if SHOW_FIRST_PAGE_WHEN_INVALID:
                 number = 1
             else:
-                raise EmptyPage('That page number is less than 1')
+                raise EmptyPage("That page number is less than 1")
         if number > self.num_pages:
             if number == 1 and self.allow_empty_first_page:
                 pass
             elif SHOW_FIRST_PAGE_WHEN_INVALID:
                 number = 1
             else:
-                raise EmptyPage('That page contains no results')
+                raise EmptyPage("That page contains no results")
         return number
 
     def page(self, number):
@@ -64,6 +77,7 @@ class Paginator(object):
                 # (i.e. is of type list).
                 self._count = len(self.object_list)
         return self._count
+
     count = property(_get_count)
 
     def _get_num_pages(self):
@@ -75,6 +89,7 @@ class Paginator(object):
                 hits = max(1, self.count - self.orphans)
                 self._num_pages = int(ceil(hits / float(self.per_page)))
         return self._num_pages
+
     num_pages = property(_get_num_pages)
 
     def _get_page_range(self):
@@ -83,7 +98,9 @@ class Paginator(object):
         a template for loop.
         """
         return range(1, self.num_pages + 1)
+
     page_range = property(_get_page_range)
+
 
 QuerySetPaginator = Paginator  # For backwards-compatibility.
 
@@ -102,7 +119,7 @@ def add_page_querystring(func):
         if isinstance(result, int):
             querystring = self._other_page_querystring(result)
             return PageRepresentation(result, querystring)
-        elif isinstance(result, collections.Iterable):
+        elif isinstance(result, Iterable):
             new_result = []
             for number in result:
                 if isinstance(number, int):
@@ -129,7 +146,7 @@ class Page(object):
         self.number = PageRepresentation(number, self._other_page_querystring(number))
 
     def __repr__(self):
-        return '<Page %s of %s>' % (self.number, self.paginator.num_pages)
+        return "<Page %s of %s>" % (self.number, self.paginator.num_pages)
 
     def has_next(self):
         return self.number < self.paginator.num_pages
@@ -202,15 +219,18 @@ class Page(object):
         GET parameters present.
         """
         if self.paginator.request:
-            self.base_queryset['page'] = page_number
+            self.base_queryset["page"] = page_number
             return self.base_queryset.urlencode()
 
         # raise Warning("You must supply Paginator() with the request object for a proper querystring.")
-        return 'page=%s' % page_number
+        return "page=%s" % page_number
 
     def render(self):
-        return render_to_string('pure_pagination/pagination.html', {
-            'current_page': self,
-            'page_obj': self,  # Issue 9 https://github.com/jamespacileo/django-pure-pagination/issues/9
-                               # Use same naming conventions as Django
-        })
+        return render_to_string(
+            "pure_pagination/pagination.html",
+            {
+                "current_page": self,
+                "page_obj": self,  # Issue 9 https://github.com/jamespacileo/django-pure-pagination/issues/9
+                # Use same naming conventions as Django
+            },
+        )
